@@ -1,17 +1,19 @@
-import { Router } from 'express';
-import {
-    payVisits,
-    gainPerType
-} from '../controllers/transactions.controller';
-import authMiddleware from '../middlewares/authMiddleware';
-import roleMiddleware from '../middlewares/roleMiddleware';
+const express = require('express');
+const router = express.Router();
+const {
+    initiateTransaction,
+    verifyTransaction,
+    getUserTransactions,
+    handlePaymentWebhook,
+    getOwnerRevenue,
+    refundTransaction
+} = require('../controllers/transactionController');
 
-const router = Router();
+router.post('/initiate', initiateTransaction);
+router.get('/:transactionId/verify', verifyTransaction);
+router.get('/user/me', getUserTransactions);
+router.post('/webhook', handlePaymentWebhook);
+router.get('/owner/revenue', getOwnerRevenue);
+router.post('/:transactionId/refund', refundTransaction);
 
-// pay visit Route
-router.post('/pay-visit', authMiddleware, roleMiddleware("tenant"), payVisits);
-
-// Stats : total revenue per type
-router.get('/gain', gainPerType);
-
-export default router;
+module.exports = router;
