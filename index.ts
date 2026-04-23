@@ -71,11 +71,28 @@ app.use('', propertyRoutes);
 // Auth login, register and Token Generating
 app.use('', authRoutes);
 
-// Visits Route
-app.use('', visitRoutes);
 
-// Transactions Route
-app.use('', transactionRoutes);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Start the server
 app.listen(PORT, () => {
