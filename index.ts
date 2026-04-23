@@ -66,10 +66,16 @@ app.get('/', (req: Request, res: Response) => {
 app.use('/users', userRoutes);
 
 // Properties routes
-app.use('', propertyRoutes);
+app.use('/properties', propertyRoutes);
 
 // Auth login, register and Token Generating
-app.use('', authRoutes);
+app.use('/auth', authRoutes);
+
+// Visits routes
+app.use('/visits', visitRoutes);
+
+// Transactions routes
+app.use('/transactions', transactionRoutes);
 
 
 
