@@ -1,11 +1,6 @@
 import { Router } from 'express';
-import auth from "../middlewares/authMiddleware";
-const upload = require("multer")({ dest: "uploads/" });
-
-const router = Router();
-
-
-const {
+import auth from '../middlewares/authMiddleware';
+import {
   getMe,
   getUserById,
   updateMe,
@@ -14,7 +9,9 @@ const {
   getFavorites,
   addFavorite,
   removeFavorite,
-} = require("../controllers/user.controller");
+} from '../controllers/users.controller';
+
+const router = Router();
 
 //Récupérer son propre profil complet
 router.get("/me", auth, getMe);
@@ -25,9 +22,8 @@ router.put("/me", auth, updateMe);
 // Changer son mot de passe
 router.put("/me/password", auth, changePassword);
 
-// Uploader une photo de profil (multipart/form-data)
-router.post("/me/picture", auth, upload.single("picture"), uploadPicture);
-
+// Uploader une photo de profil
+router.post("/me/picture", auth, uploadPicture);
 
 // Ajouter une annonce aux favoris
 router.post("/me/favorites/:propertyId", auth, addFavorite);
@@ -41,4 +37,4 @@ router.delete("/me/favorites/:propertyId", auth, removeFavorite);
  //Récupérer le profil public d'un autre utilisateur
 router.get("/:userId", getUserById);
 
-module.exports = router;
+export default router;
