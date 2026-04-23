@@ -4,16 +4,17 @@ import { login, register ,refresh , logout } from '../controllers/auth.controlle
 const router = Router();
 
 // User login & Token Generate
-router.post('/auth/login', login);
+router.post('/login', login);
 
 // User register
-router.post('/auth/register', register);
+router.post('/register', register);
 
 // Token Refreshing
-router.post('auth/refresh', refresh);
+router.post('/refresh', refresh);
 
 // Token broker
-router.post('auth/logout', logout);
+router.post('/logout', logout);
+
 
 
 
