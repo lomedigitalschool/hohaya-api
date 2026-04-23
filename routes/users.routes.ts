@@ -1,6 +1,9 @@
-const router = require("express").Router();
-const auth = require("../middleware/auth");
+import { Router } from 'express';
+import auth from "../middlewares/authMiddleware";
 const upload = require("multer")({ dest: "uploads/" });
+
+const router = Router();
+
 
 const {
   getMe,
