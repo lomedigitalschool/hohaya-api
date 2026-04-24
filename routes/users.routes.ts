@@ -34,7 +34,7 @@ router.get("/me/favorites", auth, getFavorites);
 // Retirer une annonce des favoris
 router.delete("/me/favorites/:propertyId", auth, removeFavorite);
 
- //Récupérer le profil public d'un autre utilisateur
+//Récupérer le profil public d'un autre utilisateur
 router.get("/:userId", getUserById);
 
 export default router;
