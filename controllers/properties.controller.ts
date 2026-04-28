@@ -1,7 +1,7 @@
 import { privateDecrypt } from 'crypto';
 import { NOTFOUND } from 'dns';
 import { Request, Response } from 'express';
-import Properties from 'models/Properties';
+import Properties from '../models/Properties';
 import { title } from 'process';
 import { escape } from 'querystring';
 import { uploadPicture } from './users.controller';
