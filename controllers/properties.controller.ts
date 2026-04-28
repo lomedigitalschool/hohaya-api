@@ -10,7 +10,7 @@ export async function createProperty(req: Request, res: Response) {
     try {
         const{ ownerId, title, price, location } = req.body;
         //
-        const property = await Properties.find.findById(ownerId);
+        const property = await Properties.create(ownerId);
 
         if (!property) {
             return res.status(400).json ({ message: "no acces to property"});
@@ -30,7 +30,7 @@ export async function createProperty(req: Request, res: Response) {
 
 export async function getAllProperties(req: Request, res: Response) {
     try {
-        const properties = await Properties.getAll({
+        const properties = await Properties.findById({
         title,
         location
         });
@@ -44,7 +44,7 @@ export async function getAllProperties(req: Request, res: Response) {
 
 export async function getPropertyDetails(req: Request, res: Response) {
     try {
-        const properties = await Properties.details();
+        const properties = await Properties.findById();
     return res.status(200).json({ success: true, property: {} });
     } catch (error: any) {
         res.status(500).json({ message: NOTFOUND })
@@ -56,7 +56,7 @@ export async function getPropertyDetails(req: Request, res: Response) {
 
 export async function updateProperty(req: Request, res: Response) {
     try {
-        const properties = await Properties.update({
+        const properties = await Properties.findByIdAndUpdate({
             title,
             location,
             Location
@@ -71,9 +71,9 @@ export async function updateProperty(req: Request, res: Response) {
 
 export async function deleteProperty(req: Request, res: Response) {
     try {
-        const properties = await Properties.delete({
-            title,
-            location,
+        const properties = await Properties.deleteOne({
+            title
+    
         });
     return res.status(200).json({ success: true, message: "Property deleted" });
     } catch (error: any) {
@@ -85,7 +85,7 @@ export async function deleteProperty(req: Request, res: Response) {
 
 export async function uploadPropertyImages(req: Request, res: Response) {
     try {
-        const properties = await Properties.upload.images();
+        const properties = await Properties.find();
     return res.status(200).json({ success: true, message: "Images uploaded" });
     } catch (error: any) {
         res.status(500).json({ message: error})
@@ -96,7 +96,7 @@ export async function uploadPropertyImages(req: Request, res: Response) {
 
 export async function getMyProperties(req: Request, res: Response) {
     try {
-        const properties = await Properties.getMy({
+        const properties = await Properties.findOne({
             title,
             uploadPicture,
         });
