@@ -29,21 +29,28 @@ export async function login(req: Request, res: Response) {
             return res.status(400).json({ msg: "Password Incorrect" });
         }
 
-        // TODO: Generate and return JWT token
-        const token = jwt.sign(
+        //  Generate accessToken and RefreshToken
+        const accessToken = jwt.sign(
                         {
                           userId:user._id,
                           role:user.role
                         },
-                        process.env.SECRET_KEY!,
+                        process.env.JWT_SECRET!,
                         { expiresIn:"3h" }
                       )
-                    res.json({ token })
+                    res.json({ accessToken })
+
+        const refreshToken = jwt.sign(
+            { userId: user._id },
+            process.env.JWT_REFRESH_SECRET!,
+            { expiresIn: "7d" }
+        );
 
         return res.status(200).json({
             success: true,
             message: "Login successful",
-            token: token,
+            accessToken: accessToken,
+            refreshToken: refreshToken,
             user: {
                 id: user._id,
                 email: user.email,
@@ -77,12 +84,12 @@ export async function register(req: Request, res: Response) {
 
 
         if (!validator.isEmail(email)) {
-            throw new Error("Invalid email format");
+            throw new Error("Invalid format");
         }
 
         const existingEmail = await Users.findOne({ email });
         if (existingEmail) {
-        throw new Error("Email déjà utilisé");
+        throw new Error("Email already in use");
         }
 
 
@@ -103,15 +110,56 @@ export async function register(req: Request, res: Response) {
         return res.status(500).json({ msg: error.message || "Server error during registration" });
     }
 }
- 
 
-
-
- 
-// Token Refreshing function 
-export async function refresh(req: Request, res: Response) {
-    return res.status(200).json({ success: true, message: "Refresh token endpoint" });
+export async function googleAuth(req: Request, res: Response) {
+    try {
+        
+    } catch (error) {
+        
+    }
 }
+ 
+
+
+
+ 
+// Token Refreshing controller function 
+export async function refresh(req: Request, res: Response) {
+    try {
+        const {refreshToken} = req.body;
+
+        if (!refreshToken) {
+            return res.status(401).json({ message: "No refresh token" });
+        }
+
+
+        // refreshToken Verification
+        const decoded = jwt.verify(
+        refreshToken,
+        process.env.JWT_REFRESH_SECRET!
+        );
+
+
+        // Generate new Token
+        const newAccessToken = jwt.sign(
+            {userId:decoded.id},
+            process.env.JWT_SECRET!,
+            { expiresIn:"3h" }
+        );
+        return res.status(200).json({ success: true, 
+            message: "Refresh token endpoint" ,
+            newAccessToken: newAccessToken,
+        });
+    } catch (error:any) {
+        console.error({error:error.message})
+    }
+}
+
+
+
+
+
+
 
 
 
