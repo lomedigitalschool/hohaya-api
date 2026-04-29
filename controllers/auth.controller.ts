@@ -65,10 +65,6 @@ export async function login(req: Request, res: Response) {
 }
 
 
-
-
-
-
 // user register
 export async function register(req: Request, res: Response) {
     try {
