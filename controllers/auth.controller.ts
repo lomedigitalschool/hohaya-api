@@ -38,7 +38,7 @@ export async function login(req: Request, res: Response) {
                         process.env.JWT_SECRET!,
                         { expiresIn:"3h" }
                       )
-                    res.json({ accessToken })
+                    // res.json({ accessToken })
 
         const refreshToken = jwt.sign(
             { userId: user._id },
@@ -142,7 +142,8 @@ export async function refresh(req: Request, res: Response) {
 
         // Generate new Token
         const newAccessToken = jwt.sign(
-            {userId:decoded.id},
+            {userId:decoded.id},  
+
             process.env.JWT_SECRET!,
             { expiresIn:"3h" }
         );
