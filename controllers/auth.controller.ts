@@ -1,24 +1,18 @@
 import { Request, Response } from 'express';
 import Users from '../models/Users';
 import jwt from 'jsonwebtoken';
-import  validator  from 'validator';
+import validator from 'validator';
 import dotenv from "dotenv";
 dotenv.config();
-
-
-
-
-
-
-
-
 
 // login and Token Generating
 export async function login(req: Request, res: Response) {
     try {
+        console.log('test');
+
         const { email, password } = req.body;
         const user = await Users.findOne({ email });
-        
+
         if (!user) {
             return res.status(404).json({ msg: "User not Found" });
         }
@@ -31,14 +25,14 @@ export async function login(req: Request, res: Response) {
 
         //  Generate accessToken and RefreshToken
         const accessToken = jwt.sign(
-                        {
-                          userId:user._id,
-                          role:user.role
-                        },
-                        process.env.JWT_SECRET!,
-                        { expiresIn:"3h" }
-                      )
-                    // res.json({ accessToken })
+            {
+                userId: user._id,
+                role: user.role
+            },
+            process.env.JWT_SECRET!,
+            { expiresIn: "3h" }
+        )
+        // res.json({ accessToken })
 
         const refreshToken = jwt.sign(
             { userId: user._id },
@@ -74,13 +68,13 @@ export async function register(req: Request, res: Response) {
     try {
         // Basic register stub
         const { email,
-                password,
-                role,
-                phoneNumber,
-                firstName,
-                lastName,
-                location
-                 } = req.body;
+            password,
+            role,
+            phoneNumber,
+            firstName,
+            lastName,
+            location
+        } = req.body;
 
 
         if (!validator.isEmail(email)) {
@@ -89,44 +83,44 @@ export async function register(req: Request, res: Response) {
 
         const existingEmail = await Users.findOne({ email });
         if (existingEmail) {
-        throw new Error("Email already in use");
+            throw new Error("Email already in use");
         }
 
 
-        const user = await Users.create({ 
-            email, 
-            password, 
+        const user = await Users.create({
+            email,
+            password,
             role,
             phoneNumber,
             firstName,
             lastName,
             location
-         });
+        });
 
 
         return res.status(201).json({ success: true, message: "User registered successfully" });
-    } catch (error:any) {
-        console.error("Registration error:", error.message );
+    } catch (error: any) {
+        console.error("Registration error:", error.message);
         return res.status(500).json({ msg: error.message || "Server error during registration" });
     }
 }
 
 export async function googleAuth(req: Request, res: Response) {
     try {
-        
+
     } catch (error) {
-        
+
     }
 }
- 
 
 
 
- 
+
+
 // Token Refreshing controller function 
 export async function refresh(req: Request, res: Response) {
     try {
-        const {refreshToken} = req.body;
+        const { refreshToken } = req.body;
 
         if (!refreshToken) {
             return res.status(401).json({ message: "No refresh token" });
@@ -135,35 +129,27 @@ export async function refresh(req: Request, res: Response) {
 
         // refreshToken Verification
         const decoded = jwt.verify(
-        refreshToken,
-        process.env.JWT_REFRESH_SECRET!
+            refreshToken,
+            process.env.JWT_REFRESH_SECRET!
         );
 
 
         // Generate new Token
         const newAccessToken = jwt.sign(
-            {userId:decoded.id},  
+            { userId: decoded.id },
 
             process.env.JWT_SECRET!,
-            { expiresIn:"3h" }
+            { expiresIn: "3h" }
         );
-        return res.status(200).json({ success: true, 
-            message: "Refresh token endpoint" ,
+        return res.status(200).json({
+            success: true,
+            message: "Refresh token endpoint",
             newAccessToken: newAccessToken,
         });
-    } catch (error:any) {
-        console.error({error:error.message})
+    } catch (error: any) {
+        console.error({ error: error.message })
     }
 }
-
-
-
-
-
-
-
-
-
 
 
 // Close session function
