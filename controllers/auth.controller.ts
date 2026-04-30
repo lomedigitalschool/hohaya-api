@@ -103,48 +103,41 @@ export async function login(req: Request, res: Response) {
     } catch (error) {
         console.error("Login error:", error);
         return res.status(500).json({ msg: "Server error during login" });
-    } ``
+    }
 }
-
-
-
-
-
-
 
 // Token Refreshing controller function 
 export async function refresh(req: Request, res: Response) {
     try {
-        const { refreshToken } = req.cookies.refreshToken;
+        const { refreshToken } = req.cookies;
 
         if (!refreshToken) {
             return res.status(401).json({ message: "No refresh token" });
         }
 
         // refreshToken Verification
-        const decoded = jwt.verify(
+        const decoded: any = jwt.verify(
             refreshToken,
             process.env.JWT_REFRESH_SECRET!
         );
 
-
         // Generate new Token
         const newAccessToken = jwt.sign(
-            { userId: decoded.id },
-
+            { userId: decoded.userId },
             process.env.JWT_SECRET!,
             { expiresIn: "3h" }
         );
+
         return res.status(200).json({
             success: true,
-            message: "Refresh token endpoint",
-            newAccessToken: newAccessToken,
+            message: "Token refreshed successfully",
+            accessToken: newAccessToken,
         });
     } catch (error: any) {
-        console.error({ error: error.message })
+        console.error("Refresh error:", error.message);
+        return res.status(403).json({ message: "Invalid refresh token" });
     }
 }
-
 
 // Close session function
 export async function logout(req: Request, res: Response) {
@@ -154,5 +147,16 @@ export async function logout(req: Request, res: Response) {
     } catch (error) {
         console.error("Logout error:", error);
         return res.status(500).json({ msg: "Server error during logout" });
+    }
+}
+
+// Google OAuth stub
+export async function googleAuth(req: Request, res: Response) {
+    try {
+        // This is a stub for Google OAuth logic
+        return res.status(501).json({ success: false, message: "Google Auth not implemented yet" });
+    } catch (error: any) {
+        console.error("Google Auth error:", error.message);
+        return res.status(500).json({ msg: "Server error during Google Auth" });
     }
 }
