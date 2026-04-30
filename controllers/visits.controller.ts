@@ -5,7 +5,7 @@ import Visits from "../models/Visits";
 
 // Creat Visits
 export async function createVisits(req: AuthRequest, res: Response) {
-    try {
+    try { 
         const { propertyId, visitDate, message } = req.body;
 
         // récupérer la propriété
