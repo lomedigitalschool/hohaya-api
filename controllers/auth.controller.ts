@@ -5,64 +5,6 @@ import validator from 'validator';
 import dotenv from "dotenv";
 dotenv.config();
 
-// login and Token Generating
-export async function login(req: Request, res: Response) {
-    try {
-        console.log('test');
-
-        const { email, password } = req.body;
-        const user = await Users.findOne({ email });
-
-        if (!user) {
-            return res.status(404).json({ msg: "User not Found" });
-        }
-
-        const isPasswordMatch = await user.comparePassword(password);
-
-        if (!isPasswordMatch) {
-            return res.status(400).json({ msg: "Password Incorrect" });
-        }
-
-        //  Generate accessToken and RefreshToken
-        const accessToken = jwt.sign(
-            {
-                userId: user._id,
-                role: user.role
-            },
-            process.env.JWT_SECRET!,
-            { expiresIn: "3h" }
-        )
-        // res.json({ accessToken })
-
-        const refreshToken = jwt.sign(
-            { userId: user._id },
-            process.env.JWT_REFRESH_SECRET!,
-            { expiresIn: "7d" }
-        );
-
-        return res.status(200).json({
-            success: true,
-            message: "Login successful",
-            accessToken: accessToken,
-            refreshToken: refreshToken,
-            user: {
-                id: user._id,
-                email: user.email,
-                role: user.role
-            }
-        });
-
-    } catch (error) {
-        console.error("Login error:", error);
-        return res.status(500).json({ msg: "Server error during login" });
-    }
-}
-
-
-
-
-
-
 // user register
 export async function register(req: Request, res: Response) {
     try {
@@ -105,13 +47,66 @@ export async function register(req: Request, res: Response) {
     }
 }
 
-export async function googleAuth(req: Request, res: Response) {
+// login and Token Generating
+export async function login(req: Request, res: Response) {
     try {
+        const { email, password } = req.body;
+        const user = await Users.findOne({ email });
+
+        if (!user) {
+            return res.status(404).json({ msg: "User not Found" });
+        }
+
+        const isPasswordMatch = await user.comparePassword(password);
+
+        if (!isPasswordMatch) {
+            return res.status(400).json({ msg: "Password Incorrect" });
+        }
+
+        //  Generate accessToken and RefreshToken
+        const accessToken = jwt.sign(
+            {
+                userId: user._id,
+                role: user.role
+            },
+            process.env.JWT_SECRET!,
+            { expiresIn: "3h" }
+        )
+        // res.json({ accessToken })
+
+        const refreshToken = jwt.sign(
+            { userId: user._id },
+            process.env.JWT_REFRESH_SECRET!,
+            { expiresIn: "7d" }
+        );
+
+        user.refreshToken = refreshToken;
+        await user.save();
+
+        res.cookie("refreshToken",
+            refreshToken,
+            { httpOnly: true, secure: false }
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: "Login successful",
+            accessToken: accessToken,
+            refreshToken: refreshToken,
+            user: {
+                id: user._id,
+                email: user.email,
+                role: user.role
+            }
+        });
 
     } catch (error) {
-
-    }
+        console.error("Login error:", error);
+        return res.status(500).json({ msg: "Server error during login" });
+    } ``
 }
+
+
 
 
 
@@ -120,12 +115,11 @@ export async function googleAuth(req: Request, res: Response) {
 // Token Refreshing controller function 
 export async function refresh(req: Request, res: Response) {
     try {
-        const { refreshToken } = req.body;
+        const { refreshToken } = req.cookies.refreshToken;
 
         if (!refreshToken) {
             return res.status(401).json({ message: "No refresh token" });
         }
-
 
         // refreshToken Verification
         const decoded = jwt.verify(
@@ -154,5 +148,11 @@ export async function refresh(req: Request, res: Response) {
 
 // Close session function
 export async function logout(req: Request, res: Response) {
-    return res.status(200).json({ success: true, message: "Logout endpoint" });
+    try {
+        res.clearCookie("refreshToken");
+        return res.status(200).json({ success: true, message: "Logged out successfully" });
+    } catch (error) {
+        console.error("Logout error:", error);
+        return res.status(500).json({ msg: "Server error during logout" });
+    }
 }
