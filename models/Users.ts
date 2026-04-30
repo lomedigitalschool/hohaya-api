@@ -17,6 +17,7 @@ export interface IUser extends Document {
             lng: number;
         };
     };
+    refreshToken: string;
     profilePicture?: string;
     createdAt: Date;
     comparePassword(password: string): Promise<boolean>;
@@ -73,6 +74,9 @@ const userSchema: Schema = new Schema({
     },
     profilePicture: {
         type: String // URL
+    },
+    refreshToken: { 
+        type: String 
     },
     createdAt: {
         type: Date,
