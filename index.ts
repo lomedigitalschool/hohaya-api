@@ -8,6 +8,7 @@ import userRoutes from './routes/users.routes';
 import propertyRoutes from './routes/properties.routes';
 import visitRoutes from './routes/visits.routes';
 import transactionRoutes from './routes/transactions.routes';
+import bodyParser from "body-parser";
 
 const app = express();
 const PORT = 5000;
@@ -21,6 +22,8 @@ app.use(
     })
 );
 
+
+app.use(bodyParser.json());
 app.use(
     express.json({
         limit: '100mb'
