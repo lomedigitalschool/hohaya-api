@@ -44,30 +44,27 @@ export const initiateTransaction = async (req: Request, res: Response) => {
     });
   }
 };
-
 export const verifyTransaction = async (req: Request, res: Response) => {
   try {
-    const { transactionId, success } = req.body;
+    const transactionId = req.params.transactionId as string; // ✅ CORRECT
+    const { success } = req.body;
 
     if (!transactionId) {
       return res.status(400).json({ message: 'Transaction ID is required' });
     }
 
-    // 🔍 chercher la transaction
     const transaction = await Transaction.findById(transactionId);
 
     if (!transaction) {
       return res.status(404).json({ message: 'Transaction not found' });
     }
 
-    // 🔒 éviter double traitement
     if (transaction.status !== 'pending') {
       return res.status(400).json({
         message: `Transaction already ${transaction.status}`,
       });
     }
 
-    // 🔄 mise à jour du status
     transaction.status = success ? 'completed' : 'failed';
 
     await transaction.save();
@@ -87,21 +84,30 @@ export const verifyTransaction = async (req: Request, res: Response) => {
 
 
 
-export const getUserTransactions = async (req: Request, res: Response) => {
-  try {
-    const { userId } = req.params;
+interface AuthRequest extends Request {
+  user?: {
+    id: string;
+  };
+}
 
-    // 🔍 validation
+export const getUserTransactions = async (req: AuthRequest, res: Response) => {
+  try {
+    // 🔐 récupère l'utilisateur depuis le middleware
+    const userId = req.user?.id;
+
+    // ❌ sécurité : si pas de user
     if (!userId) {
-      return res.status(400).json({ message: 'User ID is required' });
+      return res.status(401).json({
+        message: 'User not found or not authenticated',
+      });
     }
 
-    // 📦 récupération des transactions
+    // 📦 récupérer les transactions
     const transactions = await Transaction.find({ userId })
-      .sort({ createdAt: -1 }); // les plus récentes d'abord
+      .sort({ createdAt: -1 });
 
+    // 📊 réponse
     return res.status(200).json({
-      message: 'User transactions fetched successfully',
       count: transactions.length,
       data: transactions,
     });
@@ -118,67 +124,66 @@ export const getUserTransactions = async (req: Request, res: Response) => {
 
 export const handlePaymentWebhook = async (req: Request, res: Response) => {
   try {
-    const payload = req.body;
+    console.log("WEBHOOK BODY:", req.body);
 
-    // 👉 Exemple générique (adapter selon ton provider)
-    const { transactionId, status } = payload;
+    const { transactionId, status } = req.body;
 
     if (!transactionId) {
-      return res.status(400).json({ message: 'Transaction ID missing' });
+      return res.status(400).json({ message: "Transaction ID required" });
     }
 
-    // 🔍 chercher la transaction
     const transaction = await Transaction.findById(transactionId);
 
     if (!transaction) {
-      return res.status(404).json({ message: 'Transaction not found' });
+      return res.status(404).json({ message: "Transaction not found" });
     }
 
-    // 🔒 éviter double traitement
-    if (transaction.status !== 'pending') {
-      return res.status(200).json({
-        message: 'Transaction already processed',
-      });
-    }
-
-    // 🔄 mise à jour
-    if (status === 'successful') {
-      transaction.status = 'completed';
-
-      // 💰 logique métier
-      // ex: créditer wallet
-      // ex: marquer loyer payé
-
+    // 🔥 logique de mise à jour
+    if (status === "successful") {
+      transaction.status = "completed";
     } else {
-      transaction.status = 'failed';
+      transaction.status = "failed";
     }
 
     await transaction.save();
 
     return res.status(200).json({
-      message: 'Webhook processed successfully',
+      message: "Webhook processed successfully"
     });
 
   } catch (error) {
+    console.error("WEBHOOK ERROR:", error);
+
     return res.status(500).json({
-      message: 'Webhook error',
-      error,
+      message: "Webhook error",
+      error: error instanceof Error ? error.message : error
     });
   }
 };
 
-export const getOwnerRevenue = async (req: Request, res: Response) => {
-  try {
-    const ownerId = req.params.ownerId as string; // ✅ FIX
 
-    if (!mongoose.Types.ObjectId.isValid(ownerId)) {
-      return res.status(400).json({ message: 'Invalid owner ID' });
+
+interface AuthRequest extends Request {
+  user?: {
+    id: string;
+  };
+}
+
+export const getOwnerRevenue = async (req: AuthRequest, res: Response) => {
+  try {
+    const ownerId = req.user?.id;
+
+    if (!ownerId) {
+      return res.status(401).json({
+        message: 'Unauthorized - user not found',
+      });
     }
 
+    // 🔥 calcul du revenu total
     const result = await Transaction.aggregate([
       {
         $match: {
-          ownerId: new mongoose.Types.ObjectId(ownerId),
+          userId: new mongoose.Types.ObjectId(ownerId),
           status: 'completed',
         },
       },
@@ -192,51 +197,55 @@ export const getOwnerRevenue = async (req: Request, res: Response) => {
 
     const totalRevenue = result[0]?.totalRevenue || 0;
 
-    return res.status(200).json({ totalRevenue });
+    return res.status(200).json({
+      totalRevenue,
+    });
 
   } catch (error) {
-    return res.status(500).json({ message: 'Server error', error });
+    return res.status(500).json({
+      message: 'Server error',
+      error: error instanceof Error ? error.message : error,
+    });
   }
 };
 
 
 
-export const refundTransaction = async (req: Request, res: Response) => {
-  try {
-    const { transactionId } = req.body;
+interface AuthRequest extends Request {
+  user?: {
+    id: string;
+  };
+}
 
-    if (!transactionId) {
-      return res.status(400).json({ message: 'Transaction ID is required' });
+export const refundTransaction = async (req: AuthRequest, res: Response) => {
+  try {
+    const transactionId = req.params.transactionId as string;
+
+    // ✅ vérifier ID
+    if (!mongoose.Types.ObjectId.isValid(transactionId)) {
+      return res.status(400).json({ message: 'Invalid transaction ID' });
     }
 
-    // 🔍 chercher la transaction
     const transaction = await Transaction.findById(transactionId);
 
     if (!transaction) {
       return res.status(404).json({ message: 'Transaction not found' });
     }
 
-    // ❌ doit être completed
+    // 🔐 optionnel : vérifier que c’est le propriétaire
+    if (transaction.userId.toString() !== req.user?.id) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    // ❌ déjà remboursée ou pas valide
     if (transaction.status !== 'completed') {
       return res.status(400).json({
-        message: 'Only completed transactions can be refunded',
+        message: `Cannot refund a ${transaction.status} transaction`,
       });
     }
 
-    // 🔒 éviter double refund
-    if ((transaction as any).refunded) {
-      return res.status(400).json({
-        message: 'Transaction already refunded',
-      });
-    }
-
-    // 👉 ICI (PROD) : appeler ton provider
-    // await refundWithFlutterwave(transaction.providerRef);
-
-    // 🔄 mise à jour
-    transaction.status = 'failed'; // ou "refunded" si tu ajoutes ce status
-    (transaction as any).refunded = true;
-    (transaction as any).refundDate = new Date();
+    // 🔁 mise à jour
+    transaction.status = 'failed'; // ou "refunded" si tu veux améliorer ton model
 
     await transaction.save();
 
@@ -247,8 +256,11 @@ export const refundTransaction = async (req: Request, res: Response) => {
 
   } catch (error) {
     return res.status(500).json({
-      message: 'Refund failed',
-      error,
+      message: 'Refund error',
+      error: error instanceof Error ? error.message : error,
     });
   }
 };
+
+
+
