@@ -83,11 +83,6 @@ export async function login(req: Request, res: Response) {
         user.refreshToken = refreshToken;
         await user.save();
 
-        res.cookie("refreshToken",
-            refreshToken,
-            { httpOnly: true, secure: false }
-        );
-
         return res.status(200).json({
             success: true,
             message: "Login successful",
