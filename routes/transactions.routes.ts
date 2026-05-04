@@ -11,8 +11,8 @@ import {
 
 const router = Router();
 
-router.post('/initiate', initiateTransaction);
-router.patch('/:transactionId/verify', verifyTransaction);
+router.post('/initiate', authMiddleware, initiateTransaction);
+router.patch('/:transactionId/verify', authMiddleware, verifyTransaction);
 router.get('/user/me', authMiddleware, getUserTransactions);
 router.post('/webhook', handlePaymentWebhook);
 router.get('/owner/revenue', authMiddleware, getOwnerRevenue);
