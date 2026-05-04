@@ -1,6 +1,8 @@
 import express, { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
+import dotenv from "dotenv";
+dotenv.config();
 
 // Routes Import
 import authRoutes from './routes/auth.routes';
@@ -8,7 +10,7 @@ import userRoutes from './routes/users.routes';
 import propertyRoutes from './routes/properties.routes';
 import visitRoutes from './routes/visits.routes';
 import transactionRoutes from './routes/transactions.routes';
-import bodyParser from "body-parser";
+
 
 const app = express();
 const PORT = 5000;
@@ -23,7 +25,7 @@ app.use(
 );
 
 
-app.use(bodyParser.json());
+
 app.use(
     express.json({
         limit: '100mb'
@@ -48,7 +50,7 @@ app.use(cors({
 }));
 
 // MongoDb connection
-mongoose.connect('mongodb://localhost:27017/hohaya')
+mongoose.connect(process.env.MONGO_URI!)
     .then(() => {
         console.log('Connected to MongoDB');
     })
