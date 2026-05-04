@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { login, register ,refresh , logout ,googleAuth } from '../controllers/auth.controller';
+import { login, register ,refresh , logout } from '../controllers/auth.controller';
 
 const router = Router();
 
@@ -15,8 +15,6 @@ router.post('/refresh', refresh);
 // Token broker
 router.post('/logout', logout);
 
-// OAuth
-router.post('/google', googleAuth);
 
 
 

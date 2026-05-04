@@ -6,31 +6,41 @@ import Transactions from '../models/Transactions';
 
 
 
-export const initiateTransaction = async (req: Request, res: Response) => {
+
+
+interface AuthRequest extends Request {
+  user?: {
+    id: string;
+  };
+}
+
+export const initiateTransaction = async (req: AuthRequest, res: Response) => {
   try {
-    const { userId, type, amount, paymentMethod } = req.body;
+    const userId = req.user?.id;
 
-    // 🔍 Validation
-    if (!userId || !type || !amount) {
-      return res.status(400).json({ message: 'Missing required fields' });
+    const { type, amount, paymentMethod } = req.body;
+
+    // ❌ sécurité
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    if (!['rent', 'deposit', 'visitFee', 'commission'].includes(type)) {
-      return res.status(400).json({ message: 'Invalid transaction type' });
+    if (!type || !amount) {
+      return res.status(400).json({
+        message: 'Type and amount are required',
+      });
     }
 
-    if (typeof amount !== 'number' || amount <= 0) {
-      return res.status(400).json({ message: 'Invalid amount' });
-    }
-
-    // 🧾 Création transaction
-    const transaction = await Transaction.create({
+    // 📦 création transaction
+    const transaction = new Transaction({
       userId,
       type,
       amount,
-      status: 'pending', // 🔒 toujours forcé ici
+      status: 'pending',
       paymentMethod,
     });
+
+    await transaction.save();
 
     return res.status(201).json({
       message: 'Transaction initiated successfully',
@@ -39,18 +49,27 @@ export const initiateTransaction = async (req: Request, res: Response) => {
 
   } catch (error) {
     return res.status(500).json({
-      message: 'Server error',
-      error,
+      message: 'Error initiating transaction',
+      error: error instanceof Error ? error.message : error,
     });
   }
 };
-export const verifyTransaction = async (req: Request, res: Response) => {
+
+
+interface AuthRequest extends Request {
+  user?: {
+    id: string;
+  };
+}
+
+export const verifyTransaction = async (req: AuthRequest, res: Response) => {
   try {
-    const transactionId = req.params.transactionId as string; // ✅ CORRECT
+    const transactionId = req.params.transactionId as string;
     const { success } = req.body;
 
-    if (!transactionId) {
-      return res.status(400).json({ message: 'Transaction ID is required' });
+    // ✅ vérifier ID
+    if (!mongoose.Types.ObjectId.isValid(transactionId)) {
+      return res.status(400).json({ message: 'Invalid transaction ID' });
     }
 
     const transaction = await Transaction.findById(transactionId);
@@ -59,12 +78,19 @@ export const verifyTransaction = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Transaction not found' });
     }
 
+    // 🔐 optionnel : vérifier propriétaire
+    if (transaction.userId.toString() !== req.user?.id) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    // ❌ éviter double vérification
     if (transaction.status !== 'pending') {
       return res.status(400).json({
         message: `Transaction already ${transaction.status}`,
       });
     }
 
+    // 🔥 mise à jour
     transaction.status = success ? 'completed' : 'failed';
 
     await transaction.save();
@@ -76,19 +102,11 @@ export const verifyTransaction = async (req: Request, res: Response) => {
 
   } catch (error) {
     return res.status(500).json({
-      message: 'Server error',
-      error,
+      message: 'Verification error',
+      error: error instanceof Error ? error.message : error,
     });
   }
 };
-
-
-
-interface AuthRequest extends Request {
-  user?: {
-    id: string;
-  };
-}
 
 export const getUserTransactions = async (req: AuthRequest, res: Response) => {
   try {
