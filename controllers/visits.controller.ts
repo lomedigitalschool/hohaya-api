@@ -3,7 +3,7 @@ import { AuthRequest } from '../middlewares/authMiddleware';
 import Properties from "../models/Properties";
 import Visits from "../models/Visits";
 
-// Create Visits
+// Creat Visits
 export async function createVisits(req: AuthRequest, res: Response) {
     try {
         const { propertyId, visitDate, message } = req.body;
