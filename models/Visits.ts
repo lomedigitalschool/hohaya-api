@@ -5,9 +5,10 @@ export interface IVisit extends Document {
     tenantId: mongoose.Types.ObjectId;
     ownerId: mongoose.Types.ObjectId;
     visitDate: Date;
-    status: 'pending' | 'accepted' | 'rejected' | 'completed';
+    status: 'pending' | 'accepted' | 'rejected' | 'completed' | 'rescheduled' | 'cancelled';
     message?: string;
     createdAt: Date;
+    deletedAt?: Date | null;  // ✅ ajouté
 }
 
 const visitSchema: Schema = new Schema({
@@ -26,11 +27,12 @@ const visitSchema: Schema = new Schema({
     visitDate: Date,
     status: {
         type: String,
-        enum: ["pending", "accepted", "rejected", "completed"],
+        enum: ["pending", "accepted", "rejected", "completed", "rescheduled", "cancelled"], // ✅ ajouté
         default: "pending"
     },
     message: String,
-    createdAt: { type: Date, default: Date.now }
+    createdAt: { type: Date, default: Date.now },
+    deletedAt: { type: Date, default: null }  // ✅ ajouté
 });
 
 export default mongoose.model<IVisit>("Visits", visitSchema);
