@@ -1,40 +1,46 @@
 import { Router } from "express";
 import auth from "../middlewares/authMiddleware";
 import {
-    createVisits,
-    findTenantVisits,
-    findOwnerVisits,
-    acceptVisit,
-    rejectVisit,
-    rescheduleVisit,
-    getVisitById,
-    deleteVisit,
-    visitsStats
+  createVisit,
+  getTenantVisits,
+  getOwnerVisits,
+  getVisitById,
+  acceptVisit,
+  rejectVisit,
+  rescheduleVisit,
+  cancelVisit,
+  deleteVisit
 } from "../controllers/visits.controller";
 
 const router = Router();
 
-// CREATE
-router.post("/", auth, createVisits);
+/**
+ * CREATE
+ */
+router.post("/", auth, createVisit);
 
-// LISTS
-router.get("/tenant/me", auth, findTenantVisits);
-router.get("/owner/me", auth, findOwnerVisits);
+/**
+ * LISTS
+ */
+router.get("/tenant/me", auth, getTenantVisits);
+router.get("/owner/me", auth, getOwnerVisits);
 
-// ACTIONS OWNER
-router.patch("/:visitId/accept", auth, acceptVisit);
-router.patch("/:visitId/reject", auth, rejectVisit);
-
-// RESCHEDULE (owner ou tenant selon logique controller)
-router.patch("/:visitId/reschedule", auth, rescheduleVisit);
-
-// DETAILS
+/**
+ * DETAILS
+ */
 router.get("/:visitId", auth, getVisitById);
 
-// DELETE
-router.delete("/:visitId", auth, deleteVisit);
+/**
+ * ACTIONS OWNER / TENANT
+ */
+router.patch("/:visitId/accept", auth, acceptVisit);
+router.patch("/:visitId/reject", auth, rejectVisit);
+router.patch("/:visitId/reschedule", auth, rescheduleVisit);
+router.patch("/:visitId/cancel", auth, cancelVisit);
 
-// STATS
-router.get("/stats", auth, visitsStats);
+/**
+ * DELETE (soft cleanup / admin or owner only)
+ */
+router.delete("/:visitId", auth, deleteVisit);
 
 export default router;
