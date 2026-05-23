@@ -8,7 +8,6 @@ dotenv.config();
 // user register
 export async function register(req: Request, res: Response) {
     try {
-        // Basic register stub
         const { email,
             password,
             role,
