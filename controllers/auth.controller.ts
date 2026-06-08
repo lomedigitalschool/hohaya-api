@@ -1,9 +1,13 @@
 import { Request, Response } from 'express';
 import Users from '../models/Users';
+import {OAuth2Client} from 'google-auth-library';
 import jwt from 'jsonwebtoken';
 import validator from 'validator';
 import dotenv from "dotenv";
 dotenv.config();
+
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // user register
 export async function register(req: Request, res: Response) {
@@ -147,10 +151,37 @@ export async function logout(req: Request, res: Response) {
 // Google OAuth stub
 export async function googleAuth(req: Request, res: Response) {
     try {
-        // This is a stub for Google OAuth logic
-        return res.status(501).json({ success: false, message: "Google Auth not implemented yet" });
-    } catch (error: any) {
-        console.error("Google Auth error:", error.message);
-        return res.status(500).json({ msg: "Server error during Google Auth" });
+    const { token } = req.body;
+
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+
+    if (!payload) {
+      return res.status(401).json({ message: "Invalid Google token payload" });
     }
+
+    const user = {
+      email: payload.email,
+      name: payload.name,
+      picture: payload.picture,
+      googleId: payload.sub,
+    };
+
+    //  DB (findOrCreate user)
+    const appToken = jwt.sign(user, process.env.JWT_SECRET!, {
+      expiresIn: "7d",
+    });
+
+    res.json({
+      token: appToken,
+      user,
+    });
+  } catch (err) {
+    res.status(401).json({ message: "Invalid Google token" });
+  }
 }
+ 
