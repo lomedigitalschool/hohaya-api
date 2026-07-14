@@ -1,25 +1,33 @@
 import { Request, Response } from 'express';
-import Users from '../models/Users';
-import { AuthRequest } from '../middlewares/authMiddleware';
 
-export async function findUsers(req: Request, res: Response) {
-    try {
-        const users = await Users.find();
-        res.json(users);
-    } catch (error: any) {
-        res.status(500).json({ error: error.message });
-    }
+export async function getMe(req: Request, res: Response) {
+    return res.status(200).json({ success: true, user: {} });
 }
 
-export async function createUsers(req: Request, res: Response) {
-    try {
-        const user = await Users.create(req.body);
-        res.json(user);
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    }
+export async function getUserById(req: Request, res: Response) {
+    return res.status(200).json({ success: true, user: {} });
 }
 
-export async function userProfile(req: AuthRequest, res: Response) {
-    res.json({ user: req.user });
+export async function updateMe(req: Request, res: Response) {
+    return res.status(200).json({ success: true, message: "Profile updated" });
+}
+
+export async function changePassword(req: Request, res: Response) {
+    return res.status(200).json({ success: true, message: "Password changed" });
+}
+
+export async function uploadPicture(req: Request, res: Response) {
+    return res.status(200).json({ success: true, message: "Picture uploaded" });
+}
+
+export async function getFavorites(req: Request, res: Response) {
+    return res.status(200).json({ success: true, favorites: [] });
+}
+
+export async function addFavorite(req: Request, res: Response) {
+    return res.status(200).json({ success: true, message: "Added to favorites" });
+}
+
+export async function removeFavorite(req: Request, res: Response) {
+    return res.status(200).json({ success: true, message: "Removed from favorites" });
 }

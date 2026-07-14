@@ -17,6 +17,7 @@ export interface IUser extends Document {
             lng: number;
         };
     };
+    refreshToken: string;
     profilePicture?: string;
     createdAt: Date;
     comparePassword(password: string): Promise<boolean>;
@@ -74,18 +75,21 @@ const userSchema: Schema = new Schema({
     profilePicture: {
         type: String // URL
     },
+    refreshToken: { 
+        type: String 
+    },
     createdAt: {
         type: Date,
         default: Date.now
     }
 });
 
-userSchema.pre<IUser>("save", async function (next) {
-    if (!this.isModified("password")) return next();
+userSchema.pre<IUser>("save", async function () {
+    if (!this.isModified("password")) return;
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
-    next();
 });
+
 
 userSchema.methods.comparePassword = function (password: string): Promise<boolean> {
     return bcrypt.compare(password, this.password);

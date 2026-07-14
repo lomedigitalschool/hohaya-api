@@ -4,7 +4,7 @@ export interface ITransaction extends Document {
     userId: mongoose.Types.ObjectId;
     type: 'rent' | 'deposit' | 'visitFee' | 'commission';
     amount: number;
-    status: 'pending' | 'completed' | 'failed';
+    status: 'pending' | 'completed' | 'failed' | 'refunded'; // ✅
     paymentMethod?: string;
     createdAt: Date;
 }
@@ -21,7 +21,7 @@ const transactionSchema: Schema = new Schema({
     amount: Number,
     status: {
         type: String,
-        enum: ["pending", "completed", "failed"]
+        enum: ["pending", "completed", "failed", "refunded"] // ✅
     },
     paymentMethod: String,
     createdAt: { type: Date, default: Date.now }
