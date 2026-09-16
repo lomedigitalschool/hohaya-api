@@ -4,9 +4,13 @@ export interface IProperty extends Document {
     ownerId: mongoose.Types.ObjectId;
     title: string;
     description: string;
-    type: 'room' | 'house' | 'apartment' | 'land';
+    type: 'room' | 'house' | 'apartment' | 'land' | 'villa' | 'studio' | 'office' | 'commercial';
     price: number;
-    rooms?: number;
+    priceType: 'location' | 'vente';
+    deposit: number;
+    bedrooms: number;
+    bathrooms: number;
+    area: number;
     location: {
         city: string;
         district: string;
@@ -17,7 +21,7 @@ export interface IProperty extends Document {
         };
     };
     images: string[];
-    status: 'active' | 'rented' | 'sold' | 'archived';
+    status: 'pending' | 'active' | 'rented' | 'sold' | 'archived';
     isApproved: boolean;
     createdAt: Date;
 }
@@ -31,10 +35,18 @@ const propertySchema: Schema = new Schema({
     description: String,
     type: {
         type: String,
-        enum: ["room", "house", "apartment", "land"]
+        enum: ["room", "house", "apartment", "land", "villa", "studio", "office", "commercial"]
     },
     price: Number,
-    rooms: Number,
+    priceType: {
+        type: String,
+        enum: ["location", "vente"],
+        default: "location"
+    },
+    deposit: { type: Number, default: 0 },
+    bedrooms: { type: Number, default: 0 },
+    bathrooms: { type: Number, default: 0 },
+    area: { type: Number, default: 0 },
     location: {
         city: String,
         district: String,
@@ -47,8 +59,8 @@ const propertySchema: Schema = new Schema({
     images: [String],
     status: {
         type: String,
-        enum: ["active", "rented", "sold", "archived"],
-        default: "active"
+        enum: ["pending", "active", "rented", "sold", "archived"],
+        default: "pending"
     },
     isApproved: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now }

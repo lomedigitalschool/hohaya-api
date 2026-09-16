@@ -19,6 +19,7 @@ export interface IUser extends Document {
     };
     refreshToken: string;
     profilePicture?: string;
+    favorites: mongoose.Types.ObjectId[];
     createdAt: Date;
     comparePassword(password: string): Promise<boolean>;
 }
@@ -75,9 +76,13 @@ const userSchema: Schema = new Schema({
     profilePicture: {
         type: String // URL
     },
-    refreshToken: { 
-        type: String 
+    refreshToken: {
+        type: String
     },
+    favorites: [{
+        type: Schema.Types.ObjectId,
+        ref: "Properties"
+    }],
     createdAt: {
         type: Date,
         default: Date.now

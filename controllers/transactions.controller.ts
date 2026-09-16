@@ -1,12 +1,38 @@
 import { Response } from 'express';
 import mongoose from 'mongoose';
 import Transaction from '../models/Transactions';
+import Properties from '../models/Properties';
 import { AuthRequest } from '../middlewares/authMiddleware';
+
+const monthShortLabels = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+
+// hohoya-mobile's PaymentTransaction.fromJson expects a single 'method' key
+// and tracks refund progress separately from the payment status — this
+// schema conflates both into one `status` (…|'refunded'). Translate here so
+// every endpoint returns the same client-facing shape.
+function toClientJson(transaction: any) {
+    const property = transaction.propertyId;
+    const isRefunded = transaction.status === 'refunded';
+
+    return {
+        id: transaction._id,
+        type: transaction.type,
+        amount: transaction.amount,
+        method: transaction.paymentMethod,
+        status: transaction.status === 'completed' || isRefunded ? 'success' : transaction.status,
+        propertyId: property?._id ?? property ?? null,
+        propertyTitle: property?.title ?? null,
+        refundStatus: isRefunded ? 'approved' : 'none',
+        refundRequestReason: isRefunded ? transaction.refundReason ?? null : null,
+        refundDenialReason: null,
+        createdAt: transaction.createdAt ? new Date(transaction.createdAt).toISOString() : new Date().toISOString(),
+    };
+}
 
 export const initiateTransaction = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
-    const { type, amount, paymentMethod } = req.body;
+    const { type, amount, paymentMethod, propertyId } = req.body;
 
     if (!userId) {
       return res.status(401).json({ message: 'Unauthorized' });
@@ -20,6 +46,7 @@ export const initiateTransaction = async (req: AuthRequest, res: Response) => {
 
     const transaction = new Transaction({
       userId,
+      propertyId: propertyId || undefined,
       type,
       amount,
       status: 'pending',
@@ -27,11 +54,9 @@ export const initiateTransaction = async (req: AuthRequest, res: Response) => {
     });
 
     await transaction.save();
+    if (transaction.propertyId) await transaction.populate('propertyId', 'title');
 
-    return res.status(201).json({
-      message: 'Transaction initiated successfully',
-      data: transaction,
-    });
+    return res.status(201).json(toClientJson(transaction));
 
   } catch (error) {
     return res.status(500).json({
@@ -49,7 +74,7 @@ export const verifyTransaction = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: 'Invalid transaction ID' });
     }
 
-    const transaction = await Transaction.findById(transactionId);
+    const transaction = await Transaction.findById(transactionId).populate('propertyId', 'title');
 
     if (!transaction) {
       return res.status(404).json({ message: 'Transaction not found' });
@@ -70,10 +95,7 @@ export const verifyTransaction = async (req: AuthRequest, res: Response) => {
 
     await transaction.save();
 
-    return res.status(200).json({
-      message: 'Transaction verified successfully',
-      data: transaction,
-    });
+    return res.status(200).json(toClientJson(transaction));
 
   } catch (error) {
     return res.status(500).json({
@@ -100,12 +122,10 @@ export const getUserTransactions = async (req: AuthRequest, res: Response) => {
     }
 
     const transactions = await Transaction.find({ userId })
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .populate('propertyId', 'title');
 
-    return res.status(200).json({
-      count: transactions.length,
-      data: transactions,
-    });
+    return res.status(200).json(transactions.map(toClientJson));
 
   } catch (error) {
     return res.status(500).json({
@@ -145,6 +165,8 @@ export const handlePaymentWebhook = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// Revenue for the connected owner's properties (rent + deposit payments
+// only — visitFee/commission are platform fees, not owner income).
 export const getOwnerRevenue = async (req: AuthRequest, res: Response) => {
   try {
     const ownerId = req.user?.userId;
@@ -155,25 +177,38 @@ export const getOwnerRevenue = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const result = await Transaction.aggregate([
-      {
-        $match: {
-          userId: new mongoose.Types.ObjectId(ownerId),
-          status: 'completed',
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          totalRevenue: { $sum: '$amount' },
-        },
-      },
-    ]);
+    const ownedProperties = await Properties.find({ ownerId }).select('_id');
+    const propertyIds = ownedProperties.map((p) => p._id);
 
-    const totalRevenue = result[0]?.totalRevenue || 0;
+    const transactions = await Transaction.find({
+      propertyId: { $in: propertyIds },
+      type: { $in: ['rent', 'deposit'] },
+      status: 'completed',
+    })
+      .sort({ createdAt: -1 })
+      .populate('propertyId', 'title');
+
+    const now = new Date();
+    const sumWhere = (test: (createdAt: Date) => boolean) =>
+      transactions
+        .filter((t) => test(t.createdAt))
+        .reduce((sum, t) => sum + t.amount, 0);
+
+    const totalMonth = sumWhere((d) => d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth());
+    const totalYear = sumWhere((d) => d.getFullYear() === now.getFullYear());
+
+    const monthlyEvolution = [];
+    for (let i = 5; i >= 0; i--) {
+      const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const amount = sumWhere((d) => d.getFullYear() === month.getFullYear() && d.getMonth() === month.getMonth());
+      monthlyEvolution.push({ label: monthShortLabels[month.getMonth()], amount });
+    }
 
     return res.status(200).json({
-      totalRevenue,
+      totalMonth,
+      totalYear,
+      monthlyEvolution,
+      transactions: transactions.map(toClientJson),
     });
 
   } catch (error) {
@@ -187,12 +222,13 @@ export const getOwnerRevenue = async (req: AuthRequest, res: Response) => {
 export const refundTransaction = async (req: AuthRequest, res: Response) => {
   try {
     const transactionId = req.params.transactionId as string;
+    const { reason } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(transactionId)) {
       return res.status(400).json({ message: 'Invalid transaction ID' });
     }
 
-    const transaction = await Transaction.findById(transactionId);
+    const transaction = await Transaction.findById(transactionId).populate('propertyId', 'title');
 
     if (!transaction) {
       return res.status(404).json({ message: 'Transaction not found' });
@@ -209,13 +245,11 @@ export const refundTransaction = async (req: AuthRequest, res: Response) => {
     }
 
     transaction.status = 'refunded';
+    transaction.refundReason = reason;
 
     await transaction.save();
 
-    return res.status(200).json({
-      message: 'Transaction refunded successfully',
-      data: transaction,
-    });
+    return res.status(200).json(toClientJson(transaction));
 
   } catch (error) {
     return res.status(500).json({

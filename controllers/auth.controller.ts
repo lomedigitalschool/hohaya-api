@@ -1,14 +1,33 @@
 import { Request, Response } from 'express';
-import Users from '../models/Users';
+import Users, { IUser } from '../models/Users';
 import jwt from 'jsonwebtoken';
 import validator from 'validator';
 import dotenv from "dotenv";
 dotenv.config();
 
+// Shared by login and register: both a client to be logged in right away.
+function generateTokens(user: IUser) {
+    const accessToken = jwt.sign(
+        {
+            userId: user._id,
+            role: user.role
+        },
+        process.env.JWT_SECRET!,
+        { expiresIn: "3h" }
+    );
+
+    const refreshToken = jwt.sign(
+        { userId: user._id },
+        process.env.JWT_REFRESH_SECRET!,
+        { expiresIn: "7d" }
+    );
+
+    return { accessToken, refreshToken };
+}
+
 // user register
 export async function register(req: Request, res: Response) {
     try {
-        // Basic register stub
         const { email,
             password,
             role,
@@ -39,8 +58,23 @@ export async function register(req: Request, res: Response) {
             location
         });
 
+        // Log the new user in right away so clients (web, mobile) don't need
+        // a separate round trip to get a usable session.
+        const { accessToken, refreshToken } = generateTokens(user);
+        user.refreshToken = refreshToken;
+        await user.save();
 
-        return res.status(201).json({ success: true, message: "User registered successfully" });
+        return res.status(201).json({
+            success: true,
+            message: "User registered successfully",
+            accessToken,
+            refreshToken,
+            user: {
+                id: user._id,
+                email: user.email,
+                role: user.role
+            }
+        });
     } catch (error: any) {
         console.error("Registration error:", error.message);
         return res.status(500).json({ msg: error.message || "Server error during registration" });
@@ -63,22 +97,7 @@ export async function login(req: Request, res: Response) {
             return res.status(400).json({ msg: "Password Incorrect" });
         }
 
-        //  Generate accessToken and RefreshToken
-        const accessToken = jwt.sign(
-            {
-                userId: user._id,
-                role: user.role
-            },
-            process.env.JWT_SECRET!,
-            { expiresIn: "3h" }
-        )
-        // res.json({ accessToken })
-
-        const refreshToken = jwt.sign(
-            { userId: user._id },
-            process.env.JWT_REFRESH_SECRET!,
-            { expiresIn: "7d" }
-        );
+        const { accessToken, refreshToken } = generateTokens(user);
 
         user.refreshToken = refreshToken;
         await user.save();
@@ -101,10 +120,13 @@ export async function login(req: Request, res: Response) {
     }
 }
 
-// Token Refreshing controller function 
+// Token Refreshing controller function
 export async function refresh(req: Request, res: Response) {
     try {
-        const { refreshToken } = req.cookies;
+        // No cookie-parser is set up on this server (req.cookies is always
+        // undefined), and neither client (web, mobile) sends a cookie
+        // anyway — both post the refresh token in the body, like login does.
+        const { refreshToken } = req.body;
 
         if (!refreshToken) {
             return res.status(401).json({ message: "No refresh token" });
@@ -116,9 +138,18 @@ export async function refresh(req: Request, res: Response) {
             process.env.JWT_REFRESH_SECRET!
         );
 
-        // Generate new Token
+        const user = await Users.findById(decoded.userId);
+        if (!user || user.refreshToken !== refreshToken) {
+            return res.status(403).json({ message: "Invalid refresh token" });
+        }
+
+        // Only the access token is renewed here — the refresh token is
+        // long-lived and not rotated, since hohaya-web's client doesn't
+        // capture a new one from this response. Include role like login
+        // does, so the refreshed session keeps access to role-gated routes
+        // (e.g. GET /transactions/owner/revenue).
         const newAccessToken = jwt.sign(
-            { userId: decoded.userId },
+            { userId: user._id, role: user.role },
             process.env.JWT_SECRET!,
             { expiresIn: "3h" }
         );

@@ -35,7 +35,13 @@ app.use(
 // Add CORS middleware
 app.use(
   cors({
-    origin: `http://localhost:${PORT}`,
+    // This must be the *client's* origin, not the backend's own address.
+    origin: [
+      "http://localhost:5173",
+      "http://hohaya.localhost",
+      "http://api.hohaya.localhost",
+      "http://localhost:8090", // Flutter Web dev client (flutter run -d chrome --web-port=8090)
+    ],
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: [
       "Content-Type",
@@ -50,7 +56,7 @@ app.use(
 // MongoDb connection
 mongoose
   .connect(
-    "mongodb+srv://hohaya-api:XcE6QOOxZJ1pP9YV@hohaya-api.gaoewgr.mongodb.net/",
+    process.env.MONGO_URI!,
   )
   .then(() => {
     console.log("Connected to MongoDB");

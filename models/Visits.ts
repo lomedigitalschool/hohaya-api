@@ -7,6 +7,7 @@ export interface IVisit extends Document {
     visitDate: Date;
     status: 'pending' | 'accepted' | 'rejected' | 'completed';
     message?: string;
+    refusalReason?: string;
     createdAt: Date;
 }
 
@@ -30,6 +31,7 @@ const visitSchema: Schema = new Schema({
         default: "pending"
     },
     message: String,
+    refusalReason: String,
     createdAt: { type: Date, default: Date.now }
 });
 
